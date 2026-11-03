@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>BookVault</title>
+    <style>
+        :root{
+            --bg:#F6F7FC; --surface:#fff; --surface-2:#F0F2FA; --ink:#171B30; --muted:#5D6685; --line:#E4E8F4;
+            --blue:#3D5AFE; --blue-ink:#2A43D6; --blue-soft:#E8ECFF; --violet:#7C3AED; --violet-soft:#F0E8FF;
+            --good:#10875A; --good-soft:#E0F5EC; --bad:#D0304A; --bad-soft:#FDE8EC;
+            --shadow:0 1px 2px rgba(23,27,48,.05),0 6px 20px rgba(61,90,254,.07);
+            --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+        }
+        @media (prefers-color-scheme:dark){:root{
+            --bg:#0D1021; --surface:#161A2F; --surface-2:#1D2240; --ink:#ECEFFB; --muted:#9AA3C6; --line:#272C4A;
+            --blue:#7E94FF; --blue-ink:#A9B8FF; --blue-soft:#1F2658; --violet:#B093FF; --violet-soft:#2B2255;
+            --good:#46D39A; --good-soft:#12342A; --bad:#FF7A90; --bad-soft:#3A1822;
+            --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+        }}
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--font)}
+        button,input{font:inherit;color:inherit}
+        button{cursor:pointer}
+        :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
+        h1,h2,h3,p{margin:0}
+
+        .top{display:flex;align-items:center;gap:12px;padding:16px max(16px,4vw);background:var(--surface);border-bottom:1px solid var(--line)}
+        .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(140deg,var(--blue),var(--violet));display:grid;place-items:center}
+        .logo svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+        .top h1{font-size:20px;letter-spacing:-.01em}
+        .top p{color:var(--muted);font-size:13.5px}
+
+        .layout{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:24px;max-width:1280px;margin:0 auto;padding:24px max(16px,4vw) 48px}
+        .col{display:flex;flex-direction:column;gap:20px;min-width:0}
+        .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px}
+        .panel h2{font-size:17px;margin-bottom:12px}
+
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:9px 14px;font-weight:600;transition:transform .15s,background .15s,border-color .15s}
+        .btn:hover{transform:translateY(-1px);border-color:var(--blue)}
+        .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+        .btn.primary:hover{background:var(--blue-ink)}
+        @media (prefers-color-scheme:dark){.btn.primary{color:#0D1021}}
+        .btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+        .btn.sm{padding:6px 11px;font-size:13.5px;border-radius:9px}
+        .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+        .drop{border:2px dashed var(--line);border-radius:16px;background:var(--surface-2);padding:26px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .2s,background .2s}
+        .drop.over{border-color:var(--blue);background:var(--blue-soft)}
+        .drop b{font-size:16px}
+        .drop span{color:var(--muted);font-size:13.5px}
+
+        .queue{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+        .qi{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+        .qi .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+        .qi .name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .qi .st{font-size:12.5px;color:var(--muted);margin:2px 0 6px}
+        .qi.error .st{color:var(--bad)}.qi.done .st{color:var(--good)}
+        .bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+        .bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--violet));transition:width .25s}
+        .bar.busy i{width:40%!important;animation:slide 1.1s ease-in-out infinite}
+        @keyframes slide{0%{margin-left:-40%}100%{margin-left:100%}}
+
+        .search{width:100%;background:var(--surface-2);border:1px solid transparent;border-radius:11px;padding:9px 12px;margin-bottom:12px}
+        .search:focus{outline:2px solid var(--blue)}
+        .books{display:flex;flex-direction:column;gap:8px}
+        .book{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:13px;padding:10px;transition:transform .15s,box-shadow .15s,border-color .15s}
+        .book:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+        .book[aria-current="true"]{border-color:var(--blue);background:var(--blue-soft)}
+        .thumb{width:40px;height:52px;border-radius:7px;background:linear-gradient(160deg,var(--blue),var(--violet));display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700;letter-spacing:.06em}
+        .book b{display:block;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .book small{color:var(--muted);font-size:12.5px}
+        .xbtn{border:0;background:transparent;color:var(--muted);width:32px;height:32px;border-radius:9px;display:grid;place-items:center}
+        .xbtn:hover{background:var(--bad-soft);color:var(--bad)}
+        .empty{border:1.5px dashed var(--line);border-radius:14px;padding:20px;text-align:center;color:var(--muted);font-size:14px}
+        .empty b{display:block;color:var(--ink);margin-bottom:2px}
+
+        .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+        .head h2{font-size:22px;margin:0;overflow-wrap:anywhere}
+        .head small{color:var(--muted)}
+        .summary h4{margin:14px 0 4px;font-size:15px}
+        .summary p{margin:0 0 10px}
+        .summary ul{margin:0 0 10px;padding-left:20px}
+        .summary li{margin-bottom:4px}
+        .badge{display:inline-block;font-size:12px;font-weight:600;background:var(--violet-soft);color:var(--violet);padding:2px 10px;border-radius:99px}
+
+        .chat{display:flex;flex-direction:column;gap:10px;margin:4px 0 14px;max-height:420px;overflow-y:auto}
+        .msg{max-width:88%;padding:10px 13px;border-radius:14px;font-size:14.5px;overflow-wrap:anywhere;animation:rise .25s both}
+        .msg.me{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+        @media (prefers-color-scheme:dark){.msg.me{color:#0D1021}}
+        .msg.ai{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px}
+        .msg.ai p{margin:0 0 6px}.msg.ai ul{margin:0 0 6px;padding-left:18px}
+        .msg.err{background:var(--bad-soft);color:var(--bad)}
+        @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+        .ask{display:flex;gap:8px}
+        .ask input{flex:1;min-width:0;background:var(--surface-2);border:1px solid transparent;border-radius:11px;padding:10px 12px}
+        .ask input:focus{outline:2px solid var(--blue)}
+        .hint{color:var(--muted);font-size:13.5px}
+
+        .scrim{position:fixed;inset:0;background:rgba(10,12,30,.5);display:grid;place-items:center;padding:16px;z-index:50}
+        .dlg{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px}
+        .dlg .foot{display:flex;justify-content:flex-end;gap:10px}
+        #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 32px));z-index:60}
+        .toast{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:11px;padding:10px 13px;box-shadow:var(--shadow);font-size:14px;animation:rise .25s both;cursor:pointer}
+        .toast.success{border-left-color:var(--good)}.toast.error{border-left-color:var(--bad)}
+
+        @media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+        @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+    </style>
+</head>
+<body>
+<header class="top">
+    <span class="logo"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"/></svg></span>
+    <div><h1>BookVault</h1><p>Upload a PDF, get an AI summary, then ask questions about it.</p></div>
+</header>
+
+<div class="layout">
+    <div class="col">
+        <section class="panel" aria-label="Upload">
+            <h2>Upload PDFs</h2>
+            <div class="drop" id="drop">
+                <b>Drag and drop PDFs here</b>
+                <span>PDF only, up to 100 MB each</span>
+                <button class="btn primary" id="browse" type="button">Browse files</button>
+                <input type="file" id="file" accept=".pdf,application/pdf" multiple hidden>
+            </div>
+            <div class="queue" id="queue"></div>
+        </section>
+
+        <section class="panel" aria-label="Library">
+            <h2>My Library <span class="hint" id="count"></span></h2>
+            <input class="search" id="search" type="search" placeholder="Search your books" aria-label="Search your books">
+            <div class="books" id="books"></div>
+        </section>
+    </div>
+
+    <div class="col">
+        <section class="panel" id="detail" aria-label="Book details"></section>
+    </div>
+</div>
+
+<div id="modal"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+    (function(){
+        'use strict';
+        var API='/api/books';           // same origin as the Spring Boot app
+        var MAX=100*1024*1024;
+        var $=function(s){return document.querySelector(s)};
+
+        /* ---------- state (the backend has no "list books" endpoint, so the list lives in this browser) ---------- */
+        var books=load(), selected=books.length?books[0].id:null, chats={}, queue=[], qid=0, running=false, filter='';
+        function load(){try{return JSON.parse(localStorage.getItem('bookvault-books')||'[]')}catch(e){return []}}
+        function save(){try{localStorage.setItem('bookvault-books',JSON.stringify(books))}catch(e){}}
+
+        /* ---------- helpers ---------- */
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+        function size(b){return b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(1)+' MB'}
+        function date(ms){return new Date(ms).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+        function clean(t){return String(t||'').replace(/<think>[\s\S]*?<\/think>/g,'').trim()}
+        function inline(s){return s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
+        function md(t){
+            var lines=esc(clean(t)).split('\n'),h='',list=false;
+            lines.forEach(function(l){
+                var m=/^\s*(?:[-*•]|\d+\.)\s+(.*)$/.exec(l);
+                if(m){if(!list){h+='<ul>';list=true}h+='<li>'+inline(m[1])+'</li>';return}
+                if(list){h+='</ul>';list=false}
+                if(!l.trim())return;
+                var hm=/^#{1,6}\s+(.*)$/.exec(l);
+                h+=hm?'<h4>'+inline(hm[1])+'</h4>':'<p>'+inline(l)+'</p>';
+            });
+            if(list)h+='</ul>';return h;
+        }
+        function toast(msg,kind){
+            var el=document.createElement('div');el.className='toast '+(kind||'');el.textContent=msg;$('#toasts').appendChild(el);
+            var gone=function(){el.remove()};el.onclick=gone;setTimeout(gone,5000);
+        }
+        function errText(xhrOrRes,body){
+            var b=body||{};return b.error||b.message||('Request failed ('+(xhrOrRes&&xhrOrRes.status||'network')+').');
+        }
+        function getBook(id){for(var i=0;i<books.length;i++)if(books[i].id===id)return books[i];return null}
+
+        /* ---------- upload queue ---------- */
+        function addFiles(list){
+            Array.prototype.slice.call(list).forEach(function(f){
+                var q={id:++qid,file:f,name:f.name,pct:0,status:'waiting',msg:'Waiting'};
+                if(!/\.pdf$/i.test(f.name)){q.status='error';q.msg='Only PDF files are supported.'}
+                else if(f.size===0){q.status='error';q.msg='This file is empty.'}
+                else if(f.size>MAX){q.status='error';q.msg='File is larger than 100 MB.'}
+                if(q.status==='error')toast('"'+f.name+'" was not uploaded. '+q.msg,'error');
+                queue.unshift(q);
+            });
+            renderQueue();next();
+        }
+        function next(){
+            if(running)return;
+            var q=null;for(var i=queue.length-1;i>=0;i--)if(queue[i].status==='waiting'){q=queue[i];break}
+            if(!q)return;
+            running=true;send(q);
+        }
+        function send(q){
+            var xhr=new XMLHttpRequest(),fd=new FormData();
+            fd.append('file',q.file);                    // matches @RequestParam("file")
+            q.xhr=xhr;q.status='uploading';q.msg='Uploading';renderQueue();
+            xhr.open('POST',API+'/upload');
+            xhr.upload.onprogress=function(e){if(e.lengthComputable){q.pct=Math.round(e.loaded/e.total*100);renderQueue()}};
+            xhr.upload.onload=function(){q.status='processing';q.msg='Reading, indexing and summarizing. This can take a minute.';renderQueue()};
+            xhr.onload=function(){
+                var body={};try{body=JSON.parse(xhr.responseText)}catch(e){}
+                if(xhr.status>=200&&xhr.status<300&&body.bookId){
+                    q.status='done';q.msg='Summary ready';q.pct=100;
+                    var b={id:body.bookId,title:q.name.replace(/\.pdf$/i,'').replace(/[_]+/g,' '),size:q.file.size,added:Date.now(),summary:body.summary||''};
+                    books.unshift(b);save();selected=b.id;toast('"'+b.title+'" is ready.','success');
+                    render();
+                }else{q.status='error';q.msg=errText(xhr,body);toast('Upload failed: '+q.msg,'error')}
+                done();
+            };
+            xhr.onerror=function(){q.status='error';q.msg='Could not reach the server.';toast(q.msg,'error');done()};
+            xhr.onabort=function(){q.status='cancelled';q.msg='Cancelled';done()};
+            xhr.send(fd);
+        }
+        function done(){running=false;renderQueue();next()}
+        function renderQueue(){
+            var shown=queue.slice(0,6);
+            $('#queue').innerHTML=shown.map(function(q){
+                var busy=q.status==='processing';
+                var btn=(q.status==='uploading'||q.status==='processing'||q.status==='waiting')
+                    ?'<button class="btn sm" type="button" data-q="cancel" data-id="'+q.id+'">Cancel</button>'
+                    :'<button class="btn sm" type="button" data-q="clear" data-id="'+q.id+'">Dismiss</button>';
+                return '<div class="qi '+q.status+'"><div class="row"><span class="name" title="'+esc(q.name)+'">'+esc(q.name)+'</span>'+btn+'</div>'+
+                    '<div class="st">'+esc(q.msg)+' · '+size(q.file.size)+(q.status==='uploading'?' · '+q.pct+'%':'')+'</div>'+
+                    (q.status==='error'||q.status==='cancelled'?'':'<div class="bar'+(busy?' busy':'')+'"><i style="width:'+q.pct+'%"></i></div>')+'</div>';
+            }).join('');
+        }
+
+        /* ---------- library ---------- */
+        function renderLibrary(){
+            var f=filter.trim().toLowerCase();
+            var list=books.filter(function(b){return !f||b.title.toLowerCase().indexOf(f)>=0});
+            $('#count').textContent=books.length?'('+books.length+')':'';
+            $('#books').innerHTML=list.length?list.map(function(b){
+                return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center">'+
+                    '<button class="book" type="button" data-b="open" data-id="'+esc(b.id)+'" aria-current="'+(b.id===selected)+'"><span class="thumb">PDF</span>'+
+                    '<span style="min-width:0"><b title="'+esc(b.title)+'">'+esc(b.title)+'</b><small>'+size(b.size)+' · '+date(b.added)+'</small></span><span></span></button>'+
+                    '<button class="xbtn" type="button" data-b="delete" data-id="'+esc(b.id)+'" aria-label="Delete '+esc(b.title)+'" title="Delete">'+
+                    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>';
+            }).join(''):'<div class="empty"><b>'+(books.length?'No books match':'Your library is empty')+'</b>'+(books.length?'Try a different search.':'Upload a PDF to see its summary here.')+'</div>';
+        }
+
+        /* ---------- detail: summary + chat ---------- */
+        function renderDetail(){
+            var d=$('#detail'),b=getBook(selected);
+            if(!b){d.innerHTML='<div class="empty"><b>No book selected</b>Upload a PDF or choose one from your library.</div>';return}
+            var msgs=(chats[b.id]||[]).map(function(m){
+                return '<div class="msg '+m.role+(m.err?' err':'')+'">'+(m.role==='ai'&&!m.err?md(m.text):esc(m.text))+'</div>';
+            }).join('');
+            d.innerHTML='<div class="head"><div><span class="badge">Summary</span><h2>'+esc(b.title)+'</h2><small>'+size(b.size)+' · uploaded '+date(b.added)+'</small></div>'+
+                '<button class="btn sm" type="button" id="regen">Regenerate summary</button></div>'+
+                '<div class="summary" id="sum">'+(b.summary?md(b.summary):'<p class="hint">No summary stored. Use Regenerate summary.</p>')+'</div>'+
+                '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">'+
+                '<h2 style="font-size:17px;margin-bottom:8px">Ask about this book</h2>'+
+                (msgs?'':'<p class="hint" style="margin-bottom:10px">Answers use only the text of this PDF. Try "What are the main conclusions?"</p>')+
+                '<div class="chat" id="chat">'+msgs+'</div>'+
+                '<form class="ask" id="askform"><input id="q" type="text" placeholder="Type your question" aria-label="Question" autocomplete="off" maxlength="500"><button class="btn primary" id="send" type="submit">Ask</button></form>';
+            var c=$('#chat');c.scrollTop=c.scrollHeight;
+            $('#regen').onclick=function(){regen(b)};
+            $('#askform').onsubmit=function(e){e.preventDefault();ask(b)};
+        }
+        function regen(b){
+            var btn=$('#regen');btn.disabled=true;btn.textContent='Summarizing...';
+            fetch(API+'/'+encodeURIComponent(b.id)+'/summary').then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {r:r,j:j}})}).then(function(x){
+                if(x.r.ok&&x.j.summary){b.summary=x.j.summary;save();toast('Summary updated.','success')}
+                else toast(errText(x.r,x.j),'error');
+            }).catch(function(){toast('Could not reach the server.','error')}).then(function(){if(selected===b.id)renderDetail()});
+        }
+        function ask(b){
+            var inp=$('#q'),text=inp.value.trim();if(!text)return;
+            var list=chats[b.id]=chats[b.id]||[];
+            list.push({role:'me',text:text});
+            var pending={role:'ai',text:'Thinking...'};list.push(pending);
+            renderDetail();
+            fetch(API+'/'+encodeURIComponent(b.id)+'/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:text})})
+                .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {r:r,j:j}})})
+                .then(function(x){
+                    if(x.r.ok&&x.j.answer){pending.text=x.j.answer}else{pending.text=errText(x.r,x.j);pending.err=true}
+                }).catch(function(){pending.text='Could not reach the server.';pending.err=true})
+                .then(function(){if(selected===b.id){renderDetail();var i=$('#q');if(i)i.focus()}});
+        }
+
+        /* ---------- delete ---------- */
+        function confirmDelete(b){
+            $('#modal').innerHTML='<div class="scrim"><div class="dlg" role="dialog" aria-modal="true" aria-label="Delete book"><h3>Delete this book?</h3>'+
+                '<p class="hint">"'+esc(b.title)+'" and its stored vectors will be removed. This cannot be undone.</p>'+
+                '<div class="foot"><button class="btn" type="button" id="dc">Cancel</button><button class="btn danger" type="button" id="dok">Delete</button></div></div></div>';
+            $('#dc').onclick=closeModal;$('#dc').focus();
+            $('#dok').onclick=function(){
+                $('#dok').disabled=true;$('#dok').textContent='Deleting...';
+                fetch(API+'/'+encodeURIComponent(b.id),{method:'DELETE'}).then(function(r){
+                    if(!r.ok&&r.status!==404)throw new Error('failed');
+                    books=books.filter(function(x){return x.id!==b.id});delete chats[b.id];save();
+                    if(selected===b.id)selected=books.length?books[0].id:null;
+                    closeModal();render();toast('Deleted "'+b.title+'".','success');
+                }).catch(function(){closeModal();toast('Could not delete from the server. The book was kept.','error')});
+            };
+        }
+        function closeModal(){$('#modal').innerHTML=''}
+
+        /* ---------- events ---------- */
+        function render(){renderLibrary();renderDetail();renderQueue()}
+        document.addEventListener('click',function(e){
+            var q=e.target.closest('[data-q]');
+            if(q){var id=+q.dataset.id,item=queue.filter(function(x){return x.id===id})[0];if(!item)return;
+                if(q.dataset.q==='cancel'){if(item.xhr&&(item.status==='uploading'||item.status==='processing'))item.xhr.abort();else{item.status='cancelled';item.msg='Cancelled';renderQueue()}}
+                else{queue=queue.filter(function(x){return x.id!==id});renderQueue()}
+                return;
+            }
+            var b=e.target.closest('[data-b]');
+            if(b){var bk=getBook(b.dataset.id);if(!bk)return;
+                if(b.dataset.b==='open'){selected=bk.id;render();if(innerWidth<=860)$('#detail').scrollIntoView({behavior:'smooth'})}
+                else confirmDelete(bk);
+            }
+        });
+        $('#browse').onclick=function(){$('#file').click()};
+        $('#file').onchange=function(e){addFiles(e.target.files);e.target.value=''};
+        var drop=$('#drop');
+        ['dragenter','dragover'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.add('over')})});
+        ['dragleave','drop'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.remove('over')})});
+        drop.addEventListener('drop',function(e){if(e.dataTransfer&&e.dataTransfer.files)addFiles(e.dataTransfer.files)});
+        ['dragover','drop'].forEach(function(n){window.addEventListener(n,function(e){if(!drop.contains(e.target))e.preventDefault()})});
+        $('#search').oninput=function(e){filter=e.target.value;renderLibrary()};
+        document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+        render();
+    })();
+</script>
+</body>
+</html>
